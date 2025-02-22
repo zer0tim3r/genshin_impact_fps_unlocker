@@ -146,7 +146,7 @@ int main() {
 
 ULONG GetProcessId(LPCWSTR lpProcessName)
 {
-	CLIENT_ID result = { 0, 0 };
+	ULONG result = 0;
 
 	PSYSTEM_PROCESS_INFORMATION pProcesses = NULL;
 	ULONG Length = NULL;
@@ -166,9 +166,7 @@ ULONG GetProcessId(LPCWSTR lpProcessName)
 			{
 				if (pSPI_->ImageName.Length && !wcscmp(pSPI_->ImageName.Buffer, lpProcessName))
 				{
-					PSYSTEM_THREAD_INFORMATION pSTI = (PSYSTEM_THREAD_INFORMATION)(pSPI_ + 1);
-
-					result = pSTI->ClientId;
+					result = (ULONG)pSPI_->UniqueProcessId;
 
 					break;
 				}
@@ -178,5 +176,5 @@ ULONG GetProcessId(LPCWSTR lpProcessName)
 		free(pProcesses);
 	}
 
-	return (ULONG)result.UniqueProcess;
+	return result;
 }
