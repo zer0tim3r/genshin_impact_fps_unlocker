@@ -16,7 +16,7 @@ int main() {
 	Sleep(10000); // for loading game
 
 	ULONG ProcessId = 0;
-	
+
 	do {
 		ProcessId = GetProcessId(L"GenshinImpact.exe");
 
@@ -82,28 +82,44 @@ int main() {
 
 					//printf(">>> pattern : 0x%p\n", pattern - _image + (PBYTE)ModuleBase);
 
-					PBYTE ptr = pattern + *(int32_t*)(pattern + 1) + 5;
+					auto find_fps_offset = [&] {
+						__try {
 
-					if (ptr - _image < pNtHeaders->OptionalHeader.SizeOfCode && *ptr == 0xE9) {
-						//printf(">>> ptr : 0x%p, %02X\n", ptr - _image, *ptr);
+							PBYTE ptr = pattern + *(int32_t*)(pattern + 1) + 5;
 
-						do {
-							ptr = ptr + *(int32_t*)(ptr + 1) + 5;
+							if (ptr - _image < pNtHeaders->OptionalHeader.SizeOfCode && *ptr == 0xE9) {
+								printf(">>> ptr : 0x%p, %02X\n", ptr - _image, *ptr);
 
-							if (ptr - _image >= pNtHeaders->OptionalHeader.SizeOfCode) break;
-						} while (*ptr == 0xE9);
+								do {
+									ptr = ptr + *(int32_t*)(ptr + 1) + 5;
+
+									if (ptr - _image >= pNtHeaders->OptionalHeader.SizeOfCode) break;
+								} while (*ptr == 0xE9);
 
 
-						if (ptr - _image < pNtHeaders->OptionalHeader.SizeOfCode) {
-							ptr = ptr + *(int32_t*)(ptr + 2) + 6;
+								if (ptr - _image < pNtHeaders->OptionalHeader.SizeOfCode && *ptr == 0x89) {
+									ptr = ptr + *(int32_t*)(ptr + 2) + 6;
 
-							fps_offset = ptr - _image;
+									return ptr;
+								}
 
-							break;
+							}
 						}
+						__except (EXCEPTION_EXECUTE_HANDLER) {
+							printf(">>> exception at : 0x%p, continue...\n", pattern);
+						}
+
+						return (PBYTE)0;
+					};
+
+
+					if (auto fps_ptr = find_fps_offset()) {
+						fps_offset = fps_ptr - _image;
+
+						break;
 					}
 
-					pattern += 5;
+					pattern += 1;
 				} while (pattern);
 
 
@@ -135,6 +151,10 @@ int main() {
 
 				Sleep(500);
 			}
+		}
+		else {
+			printf(">>> fps_offset not found... exit\n");
+			system("pause > nul");
 		}
 
 		CloseHandle(hProcess);
